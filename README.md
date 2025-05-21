@@ -232,5 +232,16 @@ cd brand-cody
 ## 추가 정보
 
 - H2 콘솔: `http://localhost:8080/h2-console` (JDBC URL: `jdbc:h2:mem:testdb`)
-- API 문서: `http://localhost:8080/swagger-ui.html` (Swagger UI)
+- API 문서: `http://localhost:8080/swagger-ui` (Swagger UI)
 - 초기 데이터는 `data.sql`을 통해 로드됩니다.
+
+### 🔎 API 데모 UI
+애플리케이션을 실행한 후 브라우저에서 다음 URL로 접속하여 API를 간편하게 테스트할 수 있습니다:
+```
+http://localhost:8080/index.html
+```
+
+API 데모 UI를 통해 다음 기능을 테스트할 수 있습니다:
+1. 카테고리별 최저가 조회
+2. 단일 브랜드 최저 세트 조회
+3. 특정 카테고리 최고/최저가 조회

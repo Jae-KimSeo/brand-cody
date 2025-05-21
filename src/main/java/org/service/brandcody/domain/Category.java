@@ -41,9 +41,15 @@ public enum Category {
         return displayName;
     }
 
-    public static Optional<Category> fromDisplayName(String displayName) {
-        return Arrays.stream(values())
-                .filter(category -> category.getDisplayName().equals(displayName))
-                .findFirst();
+    public static Optional<Category> fromDisplayName(String name) {
+        // 먼저 enum 이름(영문)으로 검색
+        try {
+            return Optional.of(Category.valueOf(name));
+        } catch (IllegalArgumentException e) {
+            // enum 이름으로 찾지 못한 경우, 표시 이름(한글)으로 검색
+            return Arrays.stream(values())
+                    .filter(category -> category.getDisplayName().equals(name))
+                    .findFirst();
+        }
     }
 }
