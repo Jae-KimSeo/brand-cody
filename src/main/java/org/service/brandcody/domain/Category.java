@@ -1,6 +1,7 @@
 package org.service.brandcody.domain;
 
 import java.util.Arrays;
+import java.util.Optional;
 
 public enum Category {
     TOP("상의"),
@@ -22,10 +23,9 @@ public enum Category {
         return displayName;
     }
 
-    public static Category fromDisplayName(String displayName) {
+    public static Optional<Category> fromDisplayName(String displayName) {
         return Arrays.stream(values())
                 .filter(category -> category.getDisplayName().equals(displayName))
-                        .findFirst()
-                        .orElse(null);
+                .findFirst();
     }
 }

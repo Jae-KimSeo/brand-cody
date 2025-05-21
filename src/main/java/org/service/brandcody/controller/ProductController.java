@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
@@ -66,10 +67,8 @@ public class ProductController {
             @PathVariable Long brandId,
             @PathVariable String category,
             @Valid @RequestBody ProductRequest request) {
-        Category categoryEnum = Category.fromDisplayName(category);
-        if (categoryEnum == null) {
-            throw new IllegalArgumentException("Invalid category: " + category);
-        }
+        Category categoryEnum = Category.fromDisplayName(category)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid category: " + category));
         
         Product product = productService.updateProductByBrandAndCategory(brandId, categoryEnum, request.getPrice());
         return ResponseEntity.ok(ProductResponse.from(product));
@@ -96,10 +95,8 @@ public class ProductController {
 
     @GetMapping("/category/{category}")
     public ResponseEntity<CategoryPriceResponse> getCategoryPriceInfo(@PathVariable String category) {
-        Category categoryEnum = Category.fromDisplayName(category);
-        if (categoryEnum == null) {
-            throw new IllegalArgumentException("Invalid category: " + category);
-        }
+        Category categoryEnum = Category.fromDisplayName(category)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid category: " + category));
         
         List<CategoryBrandPriceDto> lowestPrices = productService.findLowestPriceByCategory(categoryEnum);
         List<CategoryBrandPriceDto> highestPrices = productService.findHighestPriceByCategory(categoryEnum);
