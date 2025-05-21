@@ -37,7 +37,7 @@ public class SingleBrandResponse {
     
     public static SingleBrandResponse from(Brand brand, Integer calculatedTotalPrice) {
         List<ItemDto> items = Arrays.stream(Category.values())
-            .map(brand::getProductByCategory)
+            .map(brand::getCheapestProductByCategory)
             .filter(Objects::nonNull)
             .map(p -> new ItemDto(
                     p.getCategory().getDisplayName(),

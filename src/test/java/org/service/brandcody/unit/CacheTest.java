@@ -277,8 +277,8 @@ public class CacheTest {
         
         // 브랜드와 카테고리 조합 캐시 테스트
         Long brandId = 1L;
-        productService.getProductByBrandAndCategory(brandId, Category.TOP);
-        productService.getProductByBrandAndCategory(brandId, Category.PANTS);
+        productService.getProductsByBrandAndCategory(brandId, Category.TOP);
+        productService.getProductsByBrandAndCategory(brandId, Category.PANTS);
         
         // 각 조합별로 별도의 캐시 엔트리가 생성되었는지 확인
         assertThat(Objects.requireNonNull(cacheManager.getCache(CacheConfig.PRODUCT_BY_BRAND_CATEGORY_CACHE)).get(brandId + "-TOP")).isNotNull();

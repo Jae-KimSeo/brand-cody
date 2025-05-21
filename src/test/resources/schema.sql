@@ -13,6 +13,5 @@ CREATE TABLE products (
     category VARCHAR(30) NOT NULL,
     price INT NOT NULL,
     version BIGINT DEFAULT 0 NOT NULL,
-    FOREIGN KEY (brand_id) REFERENCES brands(id),
-    CONSTRAINT uk_brand_category UNIQUE (brand_id, category)
+    FOREIGN KEY (brand_id) REFERENCES brands(id)
 );

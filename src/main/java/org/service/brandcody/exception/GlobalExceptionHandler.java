@@ -61,8 +61,6 @@ public class GlobalExceptionHandler {
             if (constraintName != null) {
                 if (constraintName.contains("idx_brand_name")) {
                     errorMessage = "Brand name must be unique";
-                } else if (constraintName.contains("idx_product_brand_category")) {
-                    errorMessage = "A product with this brand and category already exists";
                 }
             }
         }

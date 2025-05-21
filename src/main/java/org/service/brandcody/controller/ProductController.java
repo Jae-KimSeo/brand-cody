@@ -80,8 +80,6 @@ public class ProductController {
             @ApiResponse(responseCode = "400", description = "잘못된 요청", 
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "브랜드를 찾을 수 없음", 
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "409", description = "이미 존재하는 브랜드-카테고리 조합", 
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping("/brand/{brandId}")
@@ -155,8 +153,7 @@ public class ProductController {
     @GetMapping("/lowest-price")
     public ResponseEntity<LowestPriceResponse> getLowestPriceByAllCategories() {
         List<CategoryBrandPriceDto> lowestPrices = productService.findLowestPriceByAllCategories();
-        
-        // Calculate total directly to avoid caching issues
+
         int totalPrice = lowestPrices.stream()
                 .mapToInt(CategoryBrandPriceDto::getPrice)
                 .sum();

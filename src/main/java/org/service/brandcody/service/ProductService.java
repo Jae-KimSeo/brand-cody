@@ -19,6 +19,7 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -51,9 +52,15 @@ public class ProductService {
     }
 
     @Cacheable(value = CacheConfig.PRODUCT_BY_BRAND_CATEGORY_CACHE, key = "#brandId + '-' + #category.name()")
-    public Optional<Product> getProductByBrandAndCategory(Long brandId, Category category) {
-        log.debug("Fetching product for brand id: {} and category: {}", brandId, category);
+    public List<Product> getProductsByBrandAndCategory(Long brandId, Category category) {
+        log.debug("Fetching products for brand id: {} and category: {}", brandId, category);
         return productRepository.findByBrandIdAndCategory(brandId, category);
+    }
+    
+    @Cacheable(value = CacheConfig.PRODUCT_BY_BRAND_CATEGORY_CACHE, key = "'cheapest-' + #brandId + '-' + #category.name()")
+    public Optional<Product> getCheapestProductByBrandAndCategory(Long brandId, Category category) {
+        log.debug("Fetching cheapest product for brand id: {} and category: {}", brandId, category);
+        return productRepository.findCheapestProductByBrandAndCategory(brandId, category);
     }
 
     @Transactional
@@ -61,6 +68,7 @@ public class ProductService {
         @CacheEvict(value = CacheConfig.PRODUCT_CACHE, allEntries = true),
         @CacheEvict(value = CacheConfig.PRODUCTS_BY_BRAND_CACHE, key = "#brandId"),
         @CacheEvict(value = CacheConfig.PRODUCT_BY_BRAND_CATEGORY_CACHE, key = "#brandId + '-' + #category.name()"),
+        @CacheEvict(value = CacheConfig.PRODUCT_BY_BRAND_CATEGORY_CACHE, key = "'cheapest-' + #brandId + '-' + #category.name()"),
         @CacheEvict(value = CacheConfig.LOWEST_PRICE_BY_CATEGORY_CACHE, allEntries = true),
         @CacheEvict(value = CacheConfig.HIGHEST_PRICE_BY_CATEGORY_CACHE, allEntries = true),
         @CacheEvict(value = CacheConfig.LOWEST_PRICE_BRAND_CACHE, allEntries = true)
@@ -70,14 +78,9 @@ public class ProductService {
         Brand brand = brandRepository.findById(brandId)
                 .orElseThrow(() -> new NoSuchElementException("Brand not found with id: " + brandId));
 
-        try {
-            Product product = new Product(category, price);
-            brand.addProduct(product);
-            return productRepository.save(product);
-        } catch (DataIntegrityViolationException e) {
-            log.warn("Concurrent product creation detected for brand {} and category {}", brandId, category);
-            throw new IllegalArgumentException("Product already exists for this brand and category");
-        }
+        Product product = new Product(category, price);
+        brand.addProduct(product);
+        return productRepository.save(product);
     }
 
     @Retryable(
@@ -117,21 +120,41 @@ public class ProductService {
         @CacheEvict(value = CacheConfig.PRODUCT_CACHE, allEntries = true),
         @CacheEvict(value = CacheConfig.PRODUCTS_BY_BRAND_CACHE, key = "#brandId"),
         @CacheEvict(value = CacheConfig.PRODUCT_BY_BRAND_CATEGORY_CACHE, key = "#brandId + '-' + #category.name()"),
+        @CacheEvict(value = CacheConfig.PRODUCT_BY_BRAND_CATEGORY_CACHE, key = "'cheapest-' + #brandId + '-' + #category.name()"),
         @CacheEvict(value = CacheConfig.LOWEST_PRICE_BY_CATEGORY_CACHE, key = "#category.name()"),
         @CacheEvict(value = CacheConfig.HIGHEST_PRICE_BY_CATEGORY_CACHE, key = "#category.name()"),
         @CacheEvict(value = CacheConfig.LOWEST_PRICE_BRAND_CACHE, allEntries = true)
     })
     public Product updateProductByBrandAndCategory(Long brandId, Category category, Integer price) {
         log.debug("Attempting to update product for brand id: {} and category: {} to price: {}", brandId, category, price);
-        Product product = productRepository.findByBrandIdAndCategory(brandId, category)
-                .orElseThrow(() -> new NoSuchElementException(
-                        "Product not found for brand id: " + brandId + " and category: " + category));
+
+        List<Product> products = productRepository.findByBrandIdAndCategory(brandId, category);
+        if (products.isEmpty()) {
+            throw new NoSuchElementException(
+                    "Product not found for brand id: " + brandId + " and category: " + category);
+        }
+
+        if (products.size() == 1) {
+            Product product = products.getFirst();
+            product.updatePrice(price);
+            try {
+                return productRepository.save(product);
+            } catch (ObjectOptimisticLockingFailureException e) {
+                log.warn("Optimistic locking failure when updating product for brand id: {} and category: {}. Retry attempt will follow.", 
+                         brandId, category);
+                throw e;
+            }
+        }
+
+        Product cheapestProduct = products.stream()
+                .min(Comparator.comparing(Product::getPrice))
+                .orElseThrow();
         
-        product.updatePrice(price);
+        cheapestProduct.updatePrice(price);
         try {
-            return productRepository.save(product);
+            return productRepository.save(cheapestProduct);
         } catch (ObjectOptimisticLockingFailureException e) {
-            log.warn("Optimistic locking failure when updating product for brand id: {} and category: {}. Retry attempt will follow.", 
+            log.warn("Optimistic locking failure when updating cheapest product for brand id: {} and category: {}. Retry attempt will follow.", 
                      brandId, category);
             throw e;
         }

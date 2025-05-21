@@ -135,8 +135,8 @@ public class ProductCrudApiTest {
     }
 
     @Test
-    @DisplayName("동일 브랜드의 동일 카테고리 상품 중복 생성 테스트")
-    void createDuplicateBrandCategoryProductTest() throws Exception {
+    @DisplayName("동일 브랜드의 동일 카테고리 다중 상품 생성 테스트")
+    void createMultipleBrandCategoryProductsTest() throws Exception {
         // Given: 특정 브랜드와 카테고리의 첫 번째 상품 생성
         String firstRequestJson = "{\"category\":\"PANTS\",\"price\":25000}";
 
@@ -146,13 +146,17 @@ public class ProductCrudApiTest {
                 .content(firstRequestJson))
                 .andExpect(status().isCreated());
 
-        // When & Then: 동일 브랜드와 카테고리로 두 번째 상품 생성 시도
-        String duplicateRequestJson = "{\"category\":\"PANTS\",\"price\":30000}";
+        // When: 동일 브랜드와 카테고리로 두 번째 상품 생성 시도
+        String secondRequestJson = "{\"category\":\"PANTS\",\"price\":30000}";
 
         mockMvc.perform(post("/api/products/brand/{brandId}", brandId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(duplicateRequestJson))
-                .andExpect(status().isBadRequest());
+                .content(secondRequestJson))
+                .andExpect(status().isCreated());
+                
+        // Then: 브랜드-카테고리에 대한 다중 상품이 존재하는지 확인
+        long productCount = productRepository.countByBrandIdAndCategory(brandId, Category.PANTS);
+        assertThat(productCount).isEqualTo(2);
     }
 
     @Test
