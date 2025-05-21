@@ -2,13 +2,16 @@ package org.service.brandcody.exception;
 
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -46,6 +49,38 @@ public class GlobalExceptionHandler {
         
         ErrorResponse response = ErrorResponse.of(HttpStatus.BAD_REQUEST, errorMessage);
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+    
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        String errorMessage = "Data integrity violation";
+
+        if (e.getCause() instanceof ConstraintViolationException constraintException) {
+            String constraintName = constraintException.getConstraintViolations().toString();
+            
+            if (constraintName != null) {
+                if (constraintName.contains("idx_brand_name")) {
+                    errorMessage = "Brand name must be unique";
+                } else if (constraintName.contains("idx_product_brand_category")) {
+                    errorMessage = "A product with this brand and category already exists";
+                }
+            }
+        }
+        
+        log.warn("Data integrity violation: {}", e.getMessage());
+        ErrorResponse response = ErrorResponse.of(HttpStatus.CONFLICT, errorMessage);
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    }
+    
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLockingFailure(ObjectOptimisticLockingFailureException e) {
+        String entityName = Objects.requireNonNull(e.getPersistentClassName()).substring(e.getPersistentClassName().lastIndexOf('.') + 1);
+        String errorMessage = entityName + " with id " + e.getIdentifier() + 
+                " was updated by another transaction. Please try again.";
+        
+        log.warn("Optimistic locking failure: {}", e.getMessage());
+        ErrorResponse response = ErrorResponse.of(HttpStatus.CONFLICT, errorMessage);
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(Exception.class)

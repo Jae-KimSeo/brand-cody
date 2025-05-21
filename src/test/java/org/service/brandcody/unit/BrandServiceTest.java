@@ -113,7 +113,6 @@ public class BrandServiceTest {
         newBrand.setId(2L);
         newBrand.setName(brandName);
 
-        when(brandRepository.findByName(brandName)).thenReturn(Optional.empty());
         when(brandRepository.save(any(Brand.class))).thenReturn(newBrand);
 
         // When
@@ -123,7 +122,6 @@ public class BrandServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(2L);
         assertThat(result.getName()).isEqualTo(brandName);
-        verify(brandRepository).findByName(brandName);
         verify(brandRepository).save(any(Brand.class));
     }
 
@@ -132,14 +130,13 @@ public class BrandServiceTest {
     void createBrand_DuplicateName_ThrowsException() {
         // Given
         String brandName = "TestBrand";
-        when(brandRepository.findByName(brandName)).thenReturn(Optional.of(testBrand));
+        when(brandRepository.save(any(Brand.class))).thenThrow(new org.springframework.dao.DataIntegrityViolationException("Duplicate entry"));
 
         // When & Then
         assertThatThrownBy(() -> brandService.createBrand(brandName))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Brand with name 'TestBrand' already exists");
-        verify(brandRepository).findByName(brandName);
-        verify(brandRepository, never()).save(any(Brand.class));
+        verify(brandRepository).save(any(Brand.class));
     }
 
     @Test
@@ -154,7 +151,6 @@ public class BrandServiceTest {
         updatedBrand.setName(newName);
 
         when(brandRepository.findById(brandId)).thenReturn(Optional.of(testBrand));
-        when(brandRepository.findByName(newName)).thenReturn(Optional.empty());
         when(brandRepository.save(any(Brand.class))).thenReturn(updatedBrand);
 
         // When
@@ -165,7 +161,6 @@ public class BrandServiceTest {
         assertThat(result.getId()).isEqualTo(brandId);
         assertThat(result.getName()).isEqualTo(newName);
         verify(brandRepository).findById(brandId);
-        verify(brandRepository).findByName(newName);
         verify(brandRepository).save(any(Brand.class));
     }
 
@@ -175,21 +170,16 @@ public class BrandServiceTest {
         // Given
         Long brandId = 1L;
         String newName = "ExistingBrand";
-        
-        Brand existingBrand = new Brand();
-        existingBrand.setId(2L);
-        existingBrand.setName(newName);
 
         when(brandRepository.findById(brandId)).thenReturn(Optional.of(testBrand));
-        when(brandRepository.findByName(newName)).thenReturn(Optional.of(existingBrand));
+        when(brandRepository.save(any(Brand.class))).thenThrow(new org.springframework.dao.DataIntegrityViolationException("Duplicate entry"));
 
         // When & Then
         assertThatThrownBy(() -> brandService.updateBrand(brandId, newName))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Brand with name 'ExistingBrand' already exists");
         verify(brandRepository).findById(brandId);
-        verify(brandRepository).findByName(newName);
-        verify(brandRepository, never()).save(any(Brand.class));
+        verify(brandRepository).save(any(Brand.class));
     }
 
     @Test
