@@ -2,13 +2,13 @@ package org.service.brandcody.service;
 
 import lombok.RequiredArgsConstructor;
 import org.service.brandcody.domain.Brand;
+import org.service.brandcody.dto.BrandTotalProjection;
 import org.service.brandcody.repository.BrandRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 
 @Service
@@ -60,23 +60,17 @@ public class BrandService {
         brandRepository.delete(brand);
     }
 
-    public Map<String, Object> findBrandWithLowestTotalPrice() {
-        Object[] result = brandRepository.findBrandWithLowestTotalPrice();
-        if (result == null || result.length < 2) {
+    public BrandTotalProjection findBrandWithLowestTotalPrice() {
+        List<BrandTotalProjection> result = brandRepository.findBrandWithLowestTotalPrice(PageRequest.of(0, 1));
+        
+        if (result.isEmpty()) {
             throw new NoSuchElementException("모든 카테고리의 상품을 보유한 브랜드를 찾을 수 없습니다. 각 브랜드는 모든 카테고리(상의, 아우터, 바지, 스니커즈, 가방, 모자, 양말, 액세서리)의 상품을 가지고 있어야 합니다.");
         }
         
-        Brand brand = (Brand) result[0];
-        Integer totalPrice = ((Number) result[1]).intValue();
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("brand", brand);
-        response.put("totalPrice", totalPrice);
-        
-        return response;
+        return result.get(0);
     }
-    
-    public List<Object> findAllBrandsWithTotalPrice() {
+
+    public List<BrandTotalProjection> findAllBrandsWithTotalPrice() {
         return brandRepository.findAllBrandsWithTotalPrice();
     }
 }

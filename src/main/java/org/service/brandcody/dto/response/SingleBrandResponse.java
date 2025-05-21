@@ -6,16 +6,20 @@ import lombok.Getter;
 import org.service.brandcody.domain.Brand;
 import org.service.brandcody.domain.Category;
 import org.service.brandcody.domain.Product;
+import org.service.brandcody.dto.ItemDto;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.text.NumberFormat;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 
 @Getter
 @Builder
 @AllArgsConstructor
 public class SingleBrandResponse {
     private String brand;
-    private Map<String, Object> items;
+    private List<ItemDto> items;
     private int totalPrice;
     private String formattedTotalPrice;
     
@@ -24,18 +28,15 @@ public class SingleBrandResponse {
     }
     
     public static SingleBrandResponse from(Brand brand, Integer calculatedTotalPrice) {
-        Map<String, Object> items = new HashMap<>();
-        
-        for (Category category : Category.values()) {
-            Product product = brand.getProductByCategory(category);
-            if (product != null) {
-                Map<String, Object> itemInfo = new HashMap<>();
-                itemInfo.put("price", product.getPrice());
-                itemInfo.put("formattedPrice", formatPrice(product.getPrice()));
-                items.put(category.getDisplayName(), itemInfo);
-            }
-        }
-        
+        List<ItemDto> items = Arrays.stream(Category.values())
+            .map(brand::getProductByCategory)
+            .filter(Objects::nonNull)
+            .map(p -> new ItemDto(
+                    p.getCategory().getDisplayName(),
+                    p.getPrice(),
+                    formatPrice(p.getPrice())))
+            .toList();
+
         return SingleBrandResponse.builder()
                 .brand(brand.getName())
                 .items(items)
@@ -44,7 +45,7 @@ public class SingleBrandResponse {
                 .build();
     }
     
-    private static String formatPrice(Integer price) {
-        return String.format("%,d원", price);
+    private static String formatPrice(int price) {
+        return NumberFormat.getNumberInstance(Locale.KOREA).format(price) + "원";
     }
 }

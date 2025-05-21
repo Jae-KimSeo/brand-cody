@@ -3,6 +3,7 @@ package org.service.brandcody.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.service.brandcody.domain.Brand;
+import org.service.brandcody.dto.BrandTotalProjection;
 import org.service.brandcody.dto.request.BrandRequest;
 import org.service.brandcody.dto.response.BrandResponse;
 import org.service.brandcody.dto.response.SingleBrandResponse;
@@ -12,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -55,11 +55,7 @@ public class BrandController {
 
     @GetMapping("/lowest-price")
     public ResponseEntity<SingleBrandResponse> getBrandWithLowestTotalPrice() {
-        Map<String, Object> result = brandService.findBrandWithLowestTotalPrice();
-        Brand brand = (Brand) result.get("brand");
-        Integer totalPrice = (Integer) result.get("totalPrice");
-        
-        SingleBrandResponse response = SingleBrandResponse.from(brand, totalPrice);
-        return ResponseEntity.ok(response);
+        BrandTotalProjection projection = brandService.findBrandWithLowestTotalPrice();
+        return ResponseEntity.ok(projection.toResponse());
     }
 }
