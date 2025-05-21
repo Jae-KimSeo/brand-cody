@@ -17,7 +17,7 @@ import java.util.List;
 @NoArgsConstructor
 public class Brand {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, unique = true)
