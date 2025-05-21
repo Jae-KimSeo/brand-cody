@@ -63,7 +63,7 @@ public class BrandService {
     public Map<String, Object> findBrandWithLowestTotalPrice() {
         Object[] result = brandRepository.findBrandWithLowestTotalPrice();
         if (result == null || result.length < 2) {
-            throw new NoSuchElementException("No brand found with products in all categories");
+            throw new NoSuchElementException("모든 카테고리의 상품을 보유한 브랜드를 찾을 수 없습니다. 각 브랜드는 모든 카테고리(상의, 아우터, 바지, 스니커즈, 가방, 모자, 양말, 액세서리)의 상품을 가지고 있어야 합니다.");
         }
         
         Brand brand = (Brand) result[0];
