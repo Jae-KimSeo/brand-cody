@@ -7,12 +7,18 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByBrandIdOrderByCategory(Long brandId);
-    Optional<Product> findByBrandIdAndCategory(Long brandId, Category category);
+    List<Product> findByBrandIdAndCategory(Long brandId, Category category);
+    
+    default Optional<Product> findCheapestProductByBrandAndCategory(Long brandId, Category category) {
+        return findByBrandIdAndCategory(brandId, category).stream()
+                .min(Comparator.comparing(Product::getPrice));
+    }
     
     // 동시성 테스트를 위한 카운트 메서드
     long countByBrandIdAndCategory(Long brandId, Category category);

@@ -5,8 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Entity
 @Table(name = "brands", indexes = {
@@ -30,16 +29,18 @@ public class Brand {
     private List<Product> products = new ArrayList<>();
 
     @Transient
-    public Product getProductByCategory(Category category) {
+    public Product getCheapestProductByCategory(Category category) {
         return products.stream()
                 .filter(product -> product.getCategory() == category)
-                .findFirst()
+                .min(Comparator.comparing(Product::getPrice))
                 .orElse(null);
     }
 
     @Transient
     public Integer getTotalPrice() {
-        return products.stream()
+        return Arrays.stream(Category.values())
+                .map(this::getCheapestProductByCategory)
+                .filter(Objects::nonNull)
                 .mapToInt(Product::getPrice)
                 .sum();
     }

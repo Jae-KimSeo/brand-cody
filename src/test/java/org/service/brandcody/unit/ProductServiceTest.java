@@ -115,20 +115,28 @@ public class ProductServiceTest {
     }
 
     @Test
-    @DisplayName("새 상품 생성 - 브랜드-카테고리 중복 케이스")
-    void createProduct_DuplicateBrandCategory_ThrowsException() {
+    @DisplayName("새 상품 생성 - 브랜드-카테고리 다중 상품 생성 가능")
+    void createProduct_MultipleBrandCategoryProducts_Succeeds() {
         // Given
         Long brandId = 1L;
         Category category = Category.TOP;
         Integer price = 5000;
 
-        when(brandRepository.findById(brandId)).thenReturn(Optional.of(testBrand));
-        when(productRepository.save(any(Product.class))).thenThrow(new org.springframework.dao.DataIntegrityViolationException("Duplicate entry"));
+        Product newProduct = new Product(category, price);
+        newProduct.setId(2L);
+        newProduct.setBrand(testBrand);
 
-        // When & Then
-        assertThatThrownBy(() -> productService.createProduct(brandId, category, price))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Product already exists for this brand and category");
+        when(brandRepository.findById(brandId)).thenReturn(Optional.of(testBrand));
+        when(productRepository.save(any(Product.class))).thenReturn(newProduct);
+
+        // When
+        Product result = productService.createProduct(brandId, category, price);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(2L);
+        assertThat(result.getCategory()).isEqualTo(category);
+        assertThat(result.getPrice()).isEqualTo(price);
         verify(brandRepository).findById(brandId);
         verify(productRepository).save(any(Product.class));
     }
@@ -195,8 +203,8 @@ public class ProductServiceTest {
     }
 
     @Test
-    @DisplayName("브랜드와 카테고리로 상품 가격 업데이트 - 정상 케이스")
-    void updateProductByBrandAndCategory_ExistingProduct_ReturnsUpdatedProduct() {
+    @DisplayName("브랜드와 카테고리로 상품 가격 업데이트 - 단일 상품 정상 케이스")
+    void updateProductByBrandAndCategory_SingleExistingProduct_ReturnsUpdatedProduct() {
         // Given
         Long brandId = 1L;
         Category category = Category.TOP;
@@ -206,7 +214,44 @@ public class ProductServiceTest {
         updatedProduct.setId(1L);
         updatedProduct.setBrand(testBrand);
 
-        when(productRepository.findByBrandIdAndCategory(brandId, category)).thenReturn(Optional.of(testProduct));
+        List<Product> singleProductList = List.of(testProduct);
+        when(productRepository.findByBrandIdAndCategory(brandId, category)).thenReturn(singleProductList);
+        when(productRepository.save(any(Product.class))).thenReturn(updatedProduct);
+
+        // When
+        Product result = productService.updateProductByBrandAndCategory(brandId, category, newPrice);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(1L);
+        assertThat(result.getCategory()).isEqualTo(category);
+        assertThat(result.getPrice()).isEqualTo(newPrice);
+        verify(productRepository).findByBrandIdAndCategory(brandId, category);
+        verify(productRepository).save(any(Product.class));
+    }
+    
+    @Test
+    @DisplayName("브랜드와 카테고리로 상품 가격 업데이트 - 다중 상품 중 최저가 업데이트 케이스")
+    void updateProductByBrandAndCategory_MultipleExistingProducts_UpdatesCheapestProduct() {
+        // Given
+        Long brandId = 1L;
+        Category category = Category.TOP;
+        Integer newPrice = 15000;
+
+        Product cheapestProduct = new Product(category, 10000);
+        cheapestProduct.setId(1L);
+        cheapestProduct.setBrand(testBrand);
+        
+        Product expensiveProduct = new Product(category, 20000);
+        expensiveProduct.setId(2L);
+        expensiveProduct.setBrand(testBrand);
+
+        Product updatedProduct = new Product(category, newPrice);
+        updatedProduct.setId(1L);
+        updatedProduct.setBrand(testBrand);
+
+        List<Product> multipleProductsList = List.of(cheapestProduct, expensiveProduct);
+        when(productRepository.findByBrandIdAndCategory(brandId, category)).thenReturn(multipleProductsList);
         when(productRepository.save(any(Product.class))).thenReturn(updatedProduct);
 
         // When
@@ -229,7 +274,7 @@ public class ProductServiceTest {
         Category category = Category.PANTS;
         Integer newPrice = 15000;
 
-        when(productRepository.findByBrandIdAndCategory(brandId, category)).thenReturn(Optional.empty());
+        when(productRepository.findByBrandIdAndCategory(brandId, category)).thenReturn(List.of());
 
         // When & Then
         assertThatThrownBy(() -> productService.updateProductByBrandAndCategory(brandId, category, newPrice))

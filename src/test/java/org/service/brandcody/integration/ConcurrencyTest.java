@@ -10,6 +10,8 @@ import org.service.brandcody.repository.BrandRepository;
 import org.service.brandcody.repository.ProductRepository;
 import org.service.brandcody.service.BrandService;
 import org.service.brandcody.service.ProductService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,11 +19,10 @@ import org.springframework.http.MediaType;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -40,6 +41,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @SpringBootTest
 @AutoConfigureMockMvc
 public class ConcurrencyTest {
+    private static final Logger log = LoggerFactory.getLogger(ConcurrencyTest.class);
 
     @Autowired
     private MockMvc mockMvc;
@@ -73,10 +75,11 @@ public class ConcurrencyTest {
     }
 
     @Test
-    @DisplayName("동일 브랜드-카테고리로 상품 동시 생성 시 하나만 성공해야 함")
+    @DisplayName("동일 브랜드-카테고리로 상품 동시 생성 시 모두 성공해야 함")
     void concurrentProductCreationTest() throws Exception {
         // 동일한 카테고리와 브랜드로 동시에 두 개의 상품을 생성
-        String productRequestJson = "{\"category\":\"TOP\",\"price\":10000}";
+        String productRequestJson1 = "{\"category\":\"TOP\",\"price\":10000}";
+        String productRequestJson2 = "{\"category\":\"TOP\",\"price\":12000}";
         
         // 성공/실패 카운터
         final AtomicInteger successCount = new AtomicInteger(0);
@@ -95,7 +98,7 @@ public class ConcurrencyTest {
                 startLatch.await(); // 메인 스레드가 시작 신호를 줄 때까지 대기
                 MvcResult result = mockMvc.perform(post("/api/products/brand/{brandId}", brandId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(productRequestJson))
+                        .content(productRequestJson1))
                         .andReturn();
                 
                 int status = result.getResponse().getStatus();
@@ -117,7 +120,7 @@ public class ConcurrencyTest {
                 startLatch.await(); // 메인 스레드가 시작 신호를 줄 때까지 대기
                 MvcResult result = mockMvc.perform(post("/api/products/brand/{brandId}", brandId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(productRequestJson))
+                        .content(productRequestJson2))
                         .andReturn();
                 
                 int status = result.getResponse().getStatus();
@@ -143,17 +146,22 @@ public class ConcurrencyTest {
         // 1. 모든 스레드가 제한 시간 내에 종료되었는지 확인
         assertThat(completed).as("모든 스레드가 타임아웃 시간 내에 완료되어야 함").isTrue();
         
-        // 2. 데이터베이스 상태 검증: 해당 브랜드-카테고리 조합의 상품이 정확히 하나만 존재해야 함
+        // 2. 데이터베이스 상태 검증: 해당 브랜드-카테고리 조합의 상품이 정확히 두 개 존재해야 함
         long productCount = productRepository.countByBrandIdAndCategory(brandId, Category.TOP);
-        assertThat(productCount).as("브랜드-카테고리 조합에 대해 하나의 상품만 존재해야 함").isEqualTo(1);
+        assertThat(productCount).as("브랜드-카테고리 조합에 대해 두 개의 상품이 존재해야 함").isEqualTo(2);
         
-        // 3. 검증: 요청이 정확히 2개 처리됨 (성공 1개 + 실패 1개)
+        // 3. 검증: 요청이 정확히 2개 처리됨 (모두 성공)
         int total = successCount.get() + failureCount.get();
         assertThat(total).as("총 처리된 요청은 2개여야 함").isEqualTo(2);
         
-        // 4. 성공 1개, 실패 1개 검증
-        assertThat(successCount.get()).as("성공적으로 생성된 상품은 1개여야 함").isEqualTo(1);
-        assertThat(failureCount.get()).as("실패한 생성 시도는 1개여야 함").isEqualTo(1);
+        // 4. 성공 2개 검증
+        assertThat(successCount.get()).as("성공적으로 생성된 상품은 2개여야 함").isEqualTo(2);
+        assertThat(failureCount.get()).as("실패한 생성 시도는 없어야 함").isEqualTo(0);
+        
+        // 5. 최저가 상품 확인
+        Optional<Product> cheapestProduct = productRepository.findCheapestProductByBrandAndCategory(brandId, Category.TOP);
+        assertThat(cheapestProduct).isPresent();
+        assertThat(cheapestProduct.get().getPrice()).isEqualTo(10000);
     }
     
     @Test
@@ -449,8 +457,8 @@ public class ConcurrencyTest {
         assertThat(totalOperations).as("총 작업 수가 스레드 수와 일치해야 함").isEqualTo(threadCount);
         
         // 각 작업 결과 출력
-        System.out.println("Concurrent test results - Read operations: " + readSuccessCount.get() + 
-                ", Write operations: " + writeSuccessCount.get() + ", Exceptions: " + exceptionCount.get());
+        log.info("Concurrent test results - Read operations: {}, Write operations: {}, Exceptions: {}", 
+                readSuccessCount.get(), writeSuccessCount.get(), exceptionCount.get());
         
         // 쓰기 작업이 있었음에도 최저가 조회가 가능해야 함
         assertThat(productService.findLowestPriceByAllCategories()).as("동시 작업 후에도 최저가 조회가 가능해야 함").isNotEmpty();
