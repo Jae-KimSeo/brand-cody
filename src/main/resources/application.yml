@@ -32,3 +32,19 @@ logging:
   level:
     org.hibernate.SQL: debug
     org.hibernate.type.descriptor.sql: trace
+
+# SpringDoc 설정
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui
+    tags-sorter: alpha
+    operations-sorter: alpha
+    display-request-duration: true
+    doc-expansion: none
+    disable-swagger-default-url: true
+  packages-to-scan: org.service.brandcody.controller
+  show-actuator: false
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
