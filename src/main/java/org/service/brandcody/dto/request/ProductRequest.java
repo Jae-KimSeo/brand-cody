@@ -9,7 +9,6 @@ import org.service.brandcody.domain.Category;
 @Getter
 @NoArgsConstructor
 public class ProductRequest {
-    @NotNull(message = "Category cannot be null")
     private Category category;
     
     @NotNull(message = "Price cannot be null")

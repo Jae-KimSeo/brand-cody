@@ -7,7 +7,7 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "products", indexes = {
-        @Index(name = "idx_product_brand_category", columnList = "brand_id, category"),
+        @Index(name = "idx_product_brand_category", columnList = "brand_id, category", unique = true),
         @Index(name = "idx_product_category_price", columnList = "category, price")
 })
 
@@ -29,6 +29,9 @@ public class Product {
 
     @Column(nullable = false)
     private Integer price;
+    
+    @Version
+    private Long version;
 
     public Product(Category category, Integer price) {
         this.category = category;

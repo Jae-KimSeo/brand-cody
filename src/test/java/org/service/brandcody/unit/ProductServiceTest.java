@@ -99,7 +99,6 @@ public class ProductServiceTest {
         newProduct.setId(2L);
 
         when(brandRepository.findById(brandId)).thenReturn(Optional.of(brand));
-        when(productRepository.findByBrandIdAndCategory(brandId, category)).thenReturn(Optional.empty());
         when(productRepository.save(any(Product.class))).thenReturn(newProduct);
 
         // When
@@ -112,7 +111,6 @@ public class ProductServiceTest {
         assertThat(result.getPrice()).isEqualTo(price);
         assertThat(result.getBrand()).isEqualTo(brand);
         verify(brandRepository).findById(brandId);
-        verify(productRepository).findByBrandIdAndCategory(brandId, category);
         verify(productRepository).save(any(Product.class));
     }
 
@@ -125,15 +123,14 @@ public class ProductServiceTest {
         Integer price = 5000;
 
         when(brandRepository.findById(brandId)).thenReturn(Optional.of(testBrand));
-        when(productRepository.findByBrandIdAndCategory(brandId, category)).thenReturn(Optional.of(testProduct));
+        when(productRepository.save(any(Product.class))).thenThrow(new org.springframework.dao.DataIntegrityViolationException("Duplicate entry"));
 
         // When & Then
         assertThatThrownBy(() -> productService.createProduct(brandId, category, price))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Product already exists for this brand and category");
         verify(brandRepository).findById(brandId);
-        verify(productRepository).findByBrandIdAndCategory(brandId, category);
-        verify(productRepository, never()).save(any(Product.class));
+        verify(productRepository).save(any(Product.class));
     }
 
     @Test

@@ -13,6 +13,9 @@ import java.util.Optional;
 public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByBrandIdOrderByCategory(Long brandId);
     Optional<Product> findByBrandIdAndCategory(Long brandId, Category category);
+    
+    // 동시성 테스트를 위한 카운트 메서드
+    long countByBrandIdAndCategory(Long brandId, Category category);
 
     // 모든 카테고리에 대해 최저가격 브랜드와 가격 조회 쿼리
     @Query("SELECT new org.service.brandcody.dto.CategoryBrandPriceDto(p.category, b.name, p.price) FROM Product p JOIN p.brand b " +

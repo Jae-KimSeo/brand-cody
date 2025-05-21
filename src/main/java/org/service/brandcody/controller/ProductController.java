@@ -50,6 +50,9 @@ public class ProductController {
     public ResponseEntity<ProductResponse> createProduct(
             @PathVariable Long brandId,
             @Valid @RequestBody ProductRequest request) {
+        if (request.getCategory() == null) {
+            throw new IllegalArgumentException("Category is required for creating a new product");
+        }
         Product product = productService.createProduct(brandId, request.getCategory(), request.getPrice());
         return new ResponseEntity<>(ProductResponse.from(product), HttpStatus.CREATED);
     }
